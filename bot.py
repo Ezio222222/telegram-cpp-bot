@@ -12,13 +12,17 @@ from telegram.ext import (
     filters,
 )
 
+# Apply nested async support for environments like Railway
 nest_asyncio.apply()
 
+# Load the bot token from environment variable
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# /start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("I am a Telegram bot created by Ezio. Send your C++ code to see output.")
 
+# Handle incoming messages as C++ code
 async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = update.message.text
     with open("code.cpp", "w") as f:
@@ -47,12 +51,13 @@ async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(output[:4000])
 
+# Main entry point
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_code))
     await app.run_polling()
 
-if __name__ == "__main__":
+# Run the bot
+if name == "main":
     asyncio.run(main())
-
