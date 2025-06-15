@@ -1,6 +1,6 @@
-import asyncio
 import os
 import subprocess
+import asyncio
 import nest_asyncio
 
 from telegram import Update
@@ -12,52 +12,50 @@ from telegram.ext import (
     filters,
 )
 
-# Apply nested async support for environments like Railway
 nest_asyncio.apply()
 
-# Load the bot token from environment variable
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN environment variable is not set!")
 
-# /start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("I am a Telegram bot created by Ezio. Send your C++ code to see output.")
+    await update.message.reply_text(
+        "Hi! I am your C++ runner bot.\nSend me C++ code and I will compile and run it."
+    )
 
-# Handle incoming messages as C++ code
 async def handle_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = update.message.text
     with open("code.cpp", "w") as f:
         f.write(code)
 
     try:
-        compile_result = subprocess.run(
+        compile_proc = subprocess.run(
             ["g++", "code.cpp", "-o", "code"],
             capture_output=True,
             text=True,
             timeout=10,
         )
-
-        if compile_result.returncode != 0:
-            output = f"❌ Compilation Error:\n{compile_result.stderr}"
+        if compile_proc.returncode != 0:
+            output = f"❌ Compilation error:\n{compile_proc.stderr}"
         else:
-            run_result = subprocess.run(
+            run_proc = subprocess.run(
                 ["./code"],
                 capture_output=True,
                 text=True,
                 timeout=5,
             )
-            output = run_result.stdout or run_result.stderr or "✅ Program ran but returned no output."
+            output = run_proc.stdout or run_proc.stderr or "✅ Program ran with no output."
     except subprocess.TimeoutExpired:
         output = "❌ Execution timed out."
 
+    # Telegram messages max length is 4096 chars; truncate if needed
     await update.message.reply_text(output[:4000])
 
-# Main entry point
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_code))
     await app.run_polling()
 
-# Run the bot
 if __name__ == "__main__":
     asyncio.run(main())
